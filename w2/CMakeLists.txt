@@ -16,6 +16,10 @@ set(W2_LOBBY_SOURCES
     lobby.cpp
     )
 
+set(W2_GAME_SOURCES
+    game.cpp
+    )
+
 
 include_directories("../3rdParty/enet/include")
 
@@ -32,9 +36,14 @@ add_executable(w2_lobby ${W2_LOBBY_SOURCES})
 target_link_libraries(w2_lobby PUBLIC project_options project_warnings)
 target_link_libraries(w2_lobby PUBLIC enet)
 
+add_executable(w2_game ${W2_GAME_SOURCES})
+target_link_libraries(w2_game PUBLIC project_options project_warnings)
+target_link_libraries(w2_game PUBLIC enet)
+
 if(MSVC)
   target_link_libraries(w2_client PUBLIC ws2_32.lib winmm.lib)
   target_link_libraries(w2_lobby PUBLIC ws2_32.lib winmm.lib)
+  target_link_libraries(w2_game PUBLIC ws2_32.lib winmm.lib)
 endif()
 
 
