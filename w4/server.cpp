@@ -9,6 +9,20 @@
 static std::vector<Entity> entities;
 static std::map<uint16_t, ENetPeer*> controlledMap;
 
+static uint16_t create_random_entity()
+{
+  uint16_t newEid = entities.size();
+  uint32_t color = 0xff000000 +
+                   0x00440000 * (1 + rand() % 4) +
+                   0x00004400 * (1 + rand() % 4) +
+                   0x00000044 * (1 + rand() % 4);
+  float x = (rand() % 40 - 20) * 5.f;
+  float y = (rand() % 40 - 20) * 5.f;
+  Entity ent = {color, x, y, newEid, false, 0.f, 0.f};
+  entities.push_back(ent);
+  return newEid;
+}
+
 void on_join(ENetPacket *packet, ENetPeer *peer, ENetHost *host)
 {
   // send all entities
@@ -16,18 +30,8 @@ void on_join(ENetPacket *packet, ENetPeer *peer, ENetHost *host)
     send_new_entity(peer, ent);
 
   // find max eid
-  uint16_t maxEid = entities.empty() ? invalid_entity : entities[0].eid;
-  for (const Entity &e : entities)
-    maxEid = std::max(maxEid, e.eid);
-  uint16_t newEid = maxEid + 1;
-  uint32_t color = 0xff000000 +
-                   0x00440000 * (rand() % 5) +
-                   0x00004400 * (rand() % 5) +
-                   0x00000044 * (rand() % 5);
-  float x = (rand() % 4) * 200.f;
-  float y = (rand() % 4) * 200.f;
-  Entity ent = {color, x, y, newEid};
-  entities.push_back(ent);
+  uint16_t newEid = create_random_entity();
+  const Entity& ent = entities[newEid];
 
   controlledMap[newEid] = peer;
 
@@ -72,8 +76,21 @@ int main(int argc, const char **argv)
     return 1;
   }
 
+  constexpr int numAi = 10;
+
+  for (int i = 0; i < numAi; ++i)
+  {
+    uint16_t eid = create_random_entity();
+    entities[eid].serverControlled = true;
+    controlledMap[eid] = nullptr;
+  }
+
+  uint32_t lastTime = enet_time_get();
   while (true)
   {
+    uint32_t curTime = enet_time_get();
+    float dt = (curTime - lastTime) * 0.001f;
+    lastTime = curTime;
     ENetEvent event;
     while (enet_host_service(server, &event, 0) > 0)
     {
@@ -98,14 +115,33 @@ int main(int argc, const char **argv)
         break;
       };
     }
-    static int t = 0;
+    for (Entity &e : entities)
+    {
+      if (e.serverControlled)
+      {
+        const float diffX = e.targetX - e.x;
+        const float diffY = e.targetY - e.y;
+        const float dirX = diffX > 0.f ? 1.f : -1.f;
+        const float dirY = diffY > 0.f ? 1.f : -1.f;
+        constexpr float spd = 50.f;
+        e.x += dirX * spd * dt;
+        e.y += dirY * spd * dt;
+        if (fabsf(diffX) < 10.f && fabsf(diffY) < 10.f)
+        {
+          e.targetX = (rand() % 40 - 20) * 15.f;
+          e.targetY = (rand() % 40 - 20) * 15.f;
+        }
+      }
+    }
     for (const Entity &e : entities)
+    {
       for (size_t i = 0; i < server->peerCount; ++i)
       {
         ENetPeer *peer = &server->peers[i];
         if (controlledMap[e.eid] != peer)
           send_snapshot(peer, e.eid, e.x, e.y);
       }
+    }
     //usleep(400000);
   }
 

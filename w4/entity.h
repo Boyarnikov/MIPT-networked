@@ -8,5 +8,8 @@ struct Entity
   float x = 0.f;
   float y = 0.f;
   uint16_t eid = invalid_entity;
+  bool serverControlled = false;
+  float targetX = 0.f;
+  float targetY = 0.f;
 };
 

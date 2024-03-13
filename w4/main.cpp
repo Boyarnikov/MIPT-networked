@@ -67,8 +67,8 @@ int main(int argc, const char **argv)
     return 1;
   }
 
-  int width = 700;
-  int height = 700;
+  int width = 800;
+  int height = 600;
   InitWindow(width, height, "w4 networked MIPT");
 
   const int scrWidth = GetMonitorWidth(0);
@@ -107,9 +107,11 @@ int main(int argc, const char **argv)
         {
         case E_SERVER_TO_CLIENT_NEW_ENTITY:
           on_new_entity_packet(event.packet);
+          printf("new it\n");
           break;
         case E_SERVER_TO_CLIENT_SET_CONTROLLED_ENTITY:
           on_set_controlled_entity(event.packet);
+          printf("got it\n");
           break;
         case E_SERVER_TO_CLIENT_SNAPSHOT:
           on_snapshot(event.packet);
