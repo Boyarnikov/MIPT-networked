@@ -6,6 +6,7 @@
 #include <vector>
 #include "entity.h"
 #include "protocol.h"
+#include "bitstream.h"
 
 
 static std::vector<Entity> entities;
@@ -117,6 +118,9 @@ int main(int argc, const char **argv)
           on_snapshot(event.packet);
           break;
         };
+        if (event.packet->referenceCount == 0) {
+          enet_packet_destroy(event.packet);
+        }
         break;
       default:
         break;
@@ -147,13 +151,13 @@ int main(int argc, const char **argv)
       BeginMode2D(camera);
         for (const Entity &e : entities)
         {
-          const Rectangle rect = {e.x, e.y, 10.f, 10.f};
-          DrawRectangleRec(rect, GetColor(e.color));
+          DrawRectangle(e.x, e.y, 10.f, 10.f, GetColor(e.color));
         }
 
       EndMode2D();
     EndDrawing();
   }
+  printf("Done");
 
   CloseWindow();
 
