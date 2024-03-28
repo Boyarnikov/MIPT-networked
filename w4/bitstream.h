@@ -20,14 +20,8 @@ public:
 	template <typename T>
 	void read(T& val)
 	{
+    // ToDo: catch when size goes negative? 
 		memcpy(&val, buff, sizeof(T));
-    size -= sizeof(T);
-		buff += sizeof(T);
-	}
-
-	template <typename T>
-	void read()
-	{
     size -= sizeof(T);
 		buff += sizeof(T);
 	}

@@ -13,13 +13,14 @@ static std::map<uint16_t, ENetPeer*> controlledMap;
 static uint16_t create_random_entity()
 {
   uint16_t newEid = entities.size();
-  uint32_t color = 0xff000000 +
+  uint32_t color = 0x44000000 * (1 + rand() % 4) +
                    0x00440000 * (1 + rand() % 4) +
-                   0x00004400 * (1 + rand() % 4) +
-                   0x00000044 * (1 + rand() % 4);
-  float x = (rand() % 40 - 20) * 5.f;
-  float y = (rand() % 40 - 20) * 5.f;
-  Entity ent = {color, x, y, newEid, false, 0.f, 0.f};
+                   0x00004400 * (1 + rand() % 4) + 
+                   0x000000ff;
+  float x = (rand() % 100 - 50) * 5.f;
+  float y = (rand() % 100 - 50) * 5.f;
+  float size = (rand() % 5 + 5.f);
+  Entity ent = {color, x, y, newEid, false, 0.f, 0.f, size};
   entities.push_back(ent);
   return newEid;
 }
@@ -36,7 +37,6 @@ void on_join(ENetPacket *packet, ENetPeer *peer, ENetHost *host)
 
   controlledMap[newEid] = peer;
 
-
   // send info about new entity to everyone
   for (size_t i = 0; i < host->connectedPeers; ++i)
     send_new_entity(&host->peers[i], ent);
@@ -47,14 +47,45 @@ void on_join(ENetPacket *packet, ENetPeer *peer, ENetHost *host)
 void on_state(ENetPacket *packet)
 {
   uint16_t eid = invalid_entity;
-  float x = 0.f; float y = 0.f;
-  deserialize_entity_state(packet, eid, x, y);
+  float x = 0.f; float y = 0.f; float size = 1.f;
+  deserialize_entity_state(packet, eid, x, y, size);
   for (Entity &e : entities)
     if (e.eid == eid)
     {
       e.x = x;
       e.y = y;
-    }
+      e.size = size;
+    } 
+}
+
+
+void teleport_to_random_position(Entity &e) {
+  e.x = (rand() % 200 - 100) * 5.f;
+  e.y = (rand() % 200 - 100) * 5.f;
+}
+
+
+void on_collision(Entity &e1, Entity &e2) {
+  if (e1.size > e2.size) {
+    e1.size += e2.size / 2;
+    e2.size /= 2;
+    teleport_to_random_position(e2);
+  }
+  else if (e1.size < e2.size) {
+    e2.size += e1.size / 2;
+    e1.size /= 2;
+    teleport_to_random_position(e1);
+  }
+  else {
+    teleport_to_random_position(e1);
+    teleport_to_random_position(e2);
+  }
+  if (controlledMap[e1.eid] != nullptr) {
+    send_entity_update(controlledMap[e1.eid], e1.eid, e1.x, e1.y, e1.size);
+  }
+  if (controlledMap[e2.eid] != nullptr) {
+    send_entity_update(controlledMap[e2.eid], e2.eid, e2.x, e2.y, e2.size);
+  }
 }
 
 int main(int argc, const char **argv)
@@ -140,7 +171,16 @@ int main(int argc, const char **argv)
       {
         ENetPeer *peer = &server->peers[i];
         if (controlledMap[e.eid] != peer)
-          send_snapshot(peer, e.eid, e.x, e.y);
+          send_snapshot(peer, e.eid, e.x, e.y, e.size);
+      }
+    }
+    for (Entity &e1 : entities)
+    {
+      for (Entity &e2 : entities)
+      {
+        if (e1.eid != e2.eid && ((e1.x - e2.x) * (e1.x - e2.x) + (e1.y - e2.y) * (e1.y - e2.y)) < ((e1.size - e2.size) * (e1.size - e2.size)) + 2.f) {
+          on_collision(e1, e2);
+        }
       }
     }
     //usleep(400000);
