@@ -8,6 +8,7 @@
 #include <map>
 
 static std::vector<Entity> entities;
+static std::map<uint16_t, int> score;
 static std::map<uint16_t, ENetPeer*> controlledMap;
 
 static uint16_t create_random_entity()
@@ -42,6 +43,18 @@ void on_join(ENetPacket *packet, ENetPeer *peer, ENetHost *host)
     send_new_entity(&host->peers[i], ent);
   // send info about controlled entity
   send_set_controlled_entity(peer, newEid);
+  on_score_update(host);
+}
+
+void on_score_update(ENetHost *server) {
+  for (Entity &e : entities)
+    if (controlledMap[e.eid] != nullptr)
+    {
+      for (size_t i = 0; i < server->connectedPeers; ++i)
+      {
+        send_player_score(&server->peers[i], e.eid, score[e.eid]);
+      }
+    } 
 }
 
 void on_state(ENetPacket *packet)
@@ -50,12 +63,12 @@ void on_state(ENetPacket *packet)
   float x = 0.f; float y = 0.f; float size = 1.f;
   deserialize_entity_state(packet, eid, x, y, size);
   for (Entity &e : entities)
-    if (e.eid == eid)
-    {
+  {
+    if (e.eid == eid) {
       e.x = x;
       e.y = y;
-      e.size = size;
-    } 
+    }
+  }
 }
 
 
@@ -67,11 +80,13 @@ void teleport_to_random_position(Entity &e) {
 
 void on_collision(Entity &e1, Entity &e2) {
   if (e1.size > e2.size) {
+    score[e1.eid] += 1; 
     e1.size += e2.size / 2;
     e2.size /= 2;
     teleport_to_random_position(e2);
   }
   else if (e1.size < e2.size) {
+    score[e2.eid] += 1; 
     e2.size += e1.size / 2;
     e1.size /= 2;
     teleport_to_random_position(e1);
@@ -115,6 +130,7 @@ int main(int argc, const char **argv)
     uint16_t eid = create_random_entity();
     entities[eid].serverControlled = true;
     controlledMap[eid] = nullptr;
+    score[eid] = 0;
   }
 
   uint32_t lastTime = enet_time_get();
@@ -178,8 +194,9 @@ int main(int argc, const char **argv)
     {
       for (Entity &e2 : entities)
       {
-        if (e1.eid != e2.eid && ((e1.x - e2.x) * (e1.x - e2.x) + (e1.y - e2.y) * (e1.y - e2.y)) < ((e1.size - e2.size) * (e1.size - e2.size)) + 2.f) {
+        if (e1.eid != e2.eid && ((e1.x - e2.x) * (e1.x - e2.x) + (e1.y - e2.y) * (e1.y - e2.y)) < ((e1.size + e2.size) * (e1.size + e2.size)) + 2.f) {
           on_collision(e1, e2);
+          on_score_update(server);
         }
       }
     }

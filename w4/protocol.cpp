@@ -62,6 +62,22 @@ void send_entity_state(ENetPeer *peer, uint16_t eid, float x, float y, float e_s
   }
 }
 
+void send_player_score(ENetPeer *peer, uint16_t eid, int score)
+{
+  uint8_t size = sizeof(uint8_t) + sizeof(uint16_t) + sizeof(int);
+  ENetPacket *packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_UNSEQUENCED);
+  
+  Bitstream bs(packet->data, size);
+  bs.write(E_SERVER_TO_CLIENT_SCORE);
+  bs.write(eid);
+  bs.write(score);
+
+  enet_peer_send(peer, 0, packet);
+  if (packet->referenceCount == 0) {
+      enet_packet_destroy(packet);
+  }
+}
+
 void send_entity_update(ENetPeer *peer, uint16_t eid, float x, float y, float e_size)
 {
   uint8_t size = sizeof(uint8_t) + sizeof(uint16_t) + 3 * sizeof(float);
@@ -132,4 +148,12 @@ void deserialize_snapshot(ENetPacket *packet, uint16_t &eid, float &x, float &y,
   bs.read(y);
   bs.read(size);
 }
+
+void deserialize_score(ENetPacket *packet, uint16_t &eid, int &score)
+{
+  Bitstream bs(packet->data + sizeof(uint8_t), 0);
+  bs.read(eid);
+  bs.read(score);
+}
+
 

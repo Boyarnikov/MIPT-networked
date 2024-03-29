@@ -10,7 +10,8 @@ enum MessageType : uint8_t
   E_SERVER_TO_CLIENT_SET_CONTROLLED_ENTITY,
   E_CLIENT_TO_SERVER_STATE,
   E_SERVER_TO_CLIENT_STATE,
-  E_SERVER_TO_CLIENT_SNAPSHOT
+  E_SERVER_TO_CLIENT_SNAPSHOT,
+  E_SERVER_TO_CLIENT_SCORE
 };
 
 void send_join(ENetPeer *peer);
@@ -19,6 +20,7 @@ void send_set_controlled_entity(ENetPeer *peer, uint16_t eid);
 void send_entity_state(ENetPeer *peer, uint16_t eid, float x, float y, float size);
 void send_entity_update(ENetPeer *peer, uint16_t eid, float x, float y, float size);
 void send_snapshot(ENetPeer *peer, uint16_t eid, float x, float y, float size);
+void send_player_score(ENetPeer *peer, uint16_t eid, int score);
 
 MessageType get_packet_type(ENetPacket *packet);
 
@@ -27,4 +29,5 @@ void deserialize_set_controlled_entity(ENetPacket *packet, uint16_t &eid);
 void deserialize_update_controlled_entity(ENetPacket *packet, uint16_t &eid);
 void deserialize_entity_state(ENetPacket *packet, uint16_t &eid, float &x, float &y, float &size);
 void deserialize_snapshot(ENetPacket *packet, uint16_t &eid, float &x, float &y, float &size);
+void deserialize_score(ENetPacket *packet, uint16_t &eid, int &score);
 

@@ -4,12 +4,16 @@
 #include <enet/enet.h>
 
 #include <vector>
+#include <map>
 #include "entity.h"
 #include "protocol.h"
 #include "bitstream.h"
 
+#undef DrawText
+
 
 static std::vector<Entity> entities;
+static std::map<uint16_t, int> score;
 static uint16_t my_entity = invalid_entity;
 
 void on_new_entity_packet(ENetPacket *packet)
@@ -42,6 +46,15 @@ void on_snapshot(ENetPacket *packet)
       e.size = size;
     }
 }
+
+void on_score(ENetPacket *packet)
+{
+  uint16_t eid = invalid_entity;
+  int _score = 0;
+  deserialize_score(packet, eid, _score);
+  score[eid] = _score;
+}
+
 
 void on_snapshot_self(ENetPacket *packet)
 {
@@ -133,6 +146,9 @@ int main(int argc, const char **argv)
         case E_SERVER_TO_CLIENT_SNAPSHOT:
           on_snapshot(event.packet);
           break;
+        case E_SERVER_TO_CLIENT_SCORE:
+          on_score(event.packet);
+          break;
         case E_SERVER_TO_CLIENT_STATE:
           on_snapshot_self(event.packet);
           break;
@@ -171,6 +187,13 @@ int main(int argc, const char **argv)
         for (const Entity &e : entities)
         {
           DrawCircle(e.x, e.y, e.size, GetColor(e.color));
+        }
+        int p = 0;
+        for (auto i: score) {
+          //printf("Score: %08i", i.first);
+          //DrawText(TextFormat("Score: %08i", i.first), 200, 80, 20, RED);
+          DrawText(TextFormat("Score for player %d: %d", i.first, i.second), -width / 2, -height / 2 + p, 20, RED);
+          p += 20;
         }
 
       EndMode2D();
